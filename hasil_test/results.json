@@ -1,0 +1,202 @@
+[
+  {
+    "image": "dataset\\raw\\2026.05.07_04_32_49_6896_esp32.jpg",
+    "timestamp": "2026-06-17T23:18:04.462944",
+    "angle": null,
+    "desks": {
+      "desk_a": {
+        "occupied": false,
+        "confidence": 0.2519477605819702,
+        "zone": {
+          "x": 20,
+          "y": 245,
+          "w": 233,
+          "h": 155
+        },
+        "person": "Asep"
+      },
+      "desk_b": {
+        "occupied": false,
+        "confidence": 0.29740577936172485,
+        "zone": {
+          "x": 283,
+          "y": 241,
+          "w": 348,
+          "h": 146
+        },
+        "person": "Budi"
+      },
+      "desk_c": {
+        "occupied": true,
+        "confidence": 0.5654439330101013,
+        "zone": {
+          "x": 259,
+          "y": 384,
+          "w": 374,
+          "h": 95
+        },
+        "person": "Siti"
+      }
+    }
+  },
+  {
+    "image": "dataset\\raw\\2026.05.07_09_25_50_4204_esp32.jpg",
+    "timestamp": "2026-06-17T23:18:04.520759",
+    "angle": null,
+    "desks": {
+      "desk_a": {
+        "occupied": false,
+        "confidence": 0.0718887522816658,
+        "zone": {
+          "x": 20,
+          "y": 245,
+          "w": 233,
+          "h": 155
+        },
+        "person": "Asep"
+      },
+      "desk_b": {
+        "occupied": true,
+        "confidence": 0.7289680242538452,
+        "zone": {
+          "x": 283,
+          "y": 241,
+          "w": 348,
+          "h": 146
+        },
+        "person": "Budi"
+      },
+      "desk_c": {
+        "occupied": false,
+        "confidence": 0.09628478437662125,
+        "zone": {
+          "x": 259,
+          "y": 384,
+          "w": 374,
+          "h": 95
+        },
+        "person": "Siti"
+      }
+    }
+  },
+  {
+    "image": "dataset\\raw\\2026.05.07_09_55_08_3854_esp32.jpg",
+    "timestamp": "2026-06-17T23:18:04.555600",
+    "angle": null,
+    "desks": {
+      "desk_a": {
+        "occupied": false,
+        "confidence": 0.03856506198644638,
+        "zone": {
+          "x": 20,
+          "y": 245,
+          "w": 233,
+          "h": 155
+        },
+        "person": "Asep"
+      },
+      "desk_b": {
+        "occupied": false,
+        "confidence": 0.06586328148841858,
+        "zone": {
+          "x": 283,
+          "y": 241,
+          "w": 348,
+          "h": 146
+        },
+        "person": "Budi"
+      },
+      "desk_c": {
+        "occupied": false,
+        "confidence": 0.19649164378643036,
+        "zone": {
+          "x": 259,
+          "y": 384,
+          "w": 374,
+          "h": 95
+        },
+        "person": "Siti"
+      }
+    }
+  },
+  {
+    "image": "dataset\\raw\\2026.05.07_04_41_11_7164_esp32.jpg",
+    "timestamp": "2026-06-17T23:18:04.586084",
+    "angle": null,
+    "desks": {
+      "desk_a": {
+        "occupied": false,
+        "confidence": 0.471011757850647,
+        "zone": {
+          "x": 20,
+          "y": 245,
+          "w": 233,
+          "h": 155
+        },
+        "person": "Asep"
+      },
+      "desk_b": {
+        "occupied": false,
+        "confidence": 0.01947188191115856,
+        "zone": {
+          "x": 283,
+          "y": 241,
+          "w": 348,
+          "h": 146
+        },
+        "person": "Budi"
+      },
+      "desk_c": {
+        "occupied": true,
+        "confidence": 0.7211836576461792,
+        "zone": {
+          "x": 259,
+          "y": 384,
+          "w": 374,
+          "h": 95
+        },
+        "person": "Siti"
+      }
+    }
+  },
+  {
+    "image": "dataset\\raw\\2026.05.08_02_39_12_3791_esp32.jpg",
+    "timestamp": "2026-06-17T23:18:04.617085",
+    "angle": null,
+    "desks": {
+      "desk_a": {
+        "occupied": false,
+        "confidence": 0.012329362332820892,
+        "zone": {
+          "x": 20,
+          "y": 245,
+          "w": 233,
+          "h": 155
+        },
+        "person": "Asep"
+      },
+      "desk_b": {
+        "occupied": false,
+        "confidence": 0.013075977563858032,
+        "zone": {
+          "x": 283,
+          "y": 241,
+          "w": 348,
+          "h": 146
+        },
+        "person": "Budi"
+      },
+      "desk_c": {
+        "occupied": true,
+        "confidence": 0.5176831483840942,
+        "zone": {
+          "x": 259,
+          "y": 384,
+          "w": 374,
+          "h": 95
+        },
+        "person": "Siti"
+      }
+    }
+  }
+]
