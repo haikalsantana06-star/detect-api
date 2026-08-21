@@ -17,6 +17,7 @@ Workflow:
        - First rectangle = desk_a
        - Second rectangle = desk_b
        - Third rectangle = desk_c
+       - Fourth rectangle = desk_d
     5. Coordinates are saved into zones.json
     6. User runs: python auto_crop.py --angle angle_1
     7. Crops are saved to dataset/crops/{desk}/to_sort/
@@ -34,8 +35,7 @@ import cv2
 import numpy as np
 
 
-# Desk names in order
-DESK_NAMES = ['desk_a', 'desk_b', 'desk_c']
+DESK_NAMES = ['desk_a', 'desk_b', 'desk_c', 'desk_d']
 
 
 class ROILabeler:
@@ -147,7 +147,8 @@ class ROILabeler:
             (0, 255, 0),    # hijau untuk desk a
             (255, 0, 0),    # Biru untuk desk b
             (0, 165, 255),  # Oren untuk desk c
-        ]
+            (243, 232, 0),  # teuing warna naon jang deck d
+        ] 
 
         for i, rect in enumerate(self.rectangles):
             x, y, w, h = rect
@@ -209,6 +210,7 @@ class ROILabeler:
         print("     - First rectangle = desk_a")
         print("     - Second rectangle = desk_b")
         print("     - Third rectangle = desk_c")
+        print("     - Fourth rectangle = desk_d")
         print("  2. Left-click and drag to draw")
         print("  3. Right-click to undo last rectangle")
         print("  4. Press ENTER when done")

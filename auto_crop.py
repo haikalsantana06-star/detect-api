@@ -92,7 +92,7 @@ def crop_images(sorted_dir='dataset/sorted', output_dir='dataset/crops',
         print(f"Please ensure images are organized in: {sorted_dir}/angle_1/, {sorted_dir}/angle_2/, etc.")
         return
 
-    desks = zones.get('desks', ['desk_a', 'desk_b', 'desk_c'])
+    desks = zones.get('desks', ['desk_a', 'desk_b', 'desk_c', 'desk_d'])
 
     for desk in desks:
         (output_path / desk / 'to_sort').mkdir(parents=True, exist_ok=True)
