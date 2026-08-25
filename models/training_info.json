@@ -1,11 +1,11 @@
 {
-  "timestamp": "20260617_225633",
+  "timestamp": "20260821_164552",
   "epochs": 20,
   "batch_size": 32,
   "learning_rate": 0.0001,
-  "best_val_acc": 0.9044368600682594,
-  "train_samples": 974,
-  "val_samples": 293,
+  "best_val_acc": 1.0,
+  "train_samples": 181,
+  "val_samples": 39,
   "classes": [
     "empty",
     "occupied"
@@ -13,44 +13,40 @@
   "include_desks": null,
   "shared_model": true,
   "dataset_stats": {
-    "total": 1283,
-    "empty": 633,
-    "occupied": 650,
+    "total": 220,
+    "empty": 144,
+    "occupied": 76,
     "per_desk": {
       "desk_a": {
-        "empty": 301,
-        "occupied": 162
+        "empty": 9,
+        "occupied": 44
       },
       "desk_b": {
-        "empty": 145,
-        "occupied": 275
+        "empty": 53,
+        "occupied": 0
       },
       "desk_c": {
-        "empty": 187,
-        "occupied": 213
+        "empty": 49,
+        "occupied": 2
+      },
+      "desk_d": {
+        "empty": 33,
+        "occupied": 30
       }
     },
     "sessions": [
-      "2026.05.07_02",
-      "2026.05.07_03",
-      "2026.05.07_04",
-      "2026.05.07_05",
-      "2026.05.07_06",
-      "2026.05.07_07",
-      "2026.05.07_08",
-      "2026.05.07_09",
-      "2026.05.07_10",
-      "2026.05.08_02"
+      "2026.08.14_11",
+      "2026.08.14_12",
+      "2026.08.14_10"
     ],
-    "num_sessions": 10
+    "num_sessions": 3
   },
   "temporal_split": {
     "enabled": true,
-    "num_train_sessions": 8,
-    "num_val_sessions": 2,
+    "num_train_sessions": 2,
+    "num_val_sessions": 1,
     "val_sessions": [
-      "2026.05.07_05",
-      "2026.05.07_09"
+      "2026.08.14_12"
     ]
   }
 }
