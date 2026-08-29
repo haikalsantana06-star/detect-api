@@ -1,0 +1,55 @@
+{
+  "timestamp": "20260825_123847",
+  "epochs": 20,
+  "batch_size": 32,
+  "learning_rate": 0.0001,
+  "best_val_acc": 0.975,
+  "train_samples": 316,
+  "val_samples": 120,
+  "classes": [
+    "empty",
+    "occupied"
+  ],
+  "include_desks": null,
+  "shared_model": true,
+  "dataset_stats": {
+    "total": 436,
+    "empty": 333,
+    "occupied": 103,
+    "per_desk": {
+      "desk_a": {
+        "empty": 50,
+        "occupied": 57
+      },
+      "desk_b": {
+        "empty": 101,
+        "occupied": 6
+      },
+      "desk_c": {
+        "empty": 103,
+        "occupied": 2
+      },
+      "desk_d": {
+        "empty": 79,
+        "occupied": 38
+      }
+    },
+    "sessions": [
+      "2026.08.14_11",
+      "2026.08.14_12",
+      "2026.08.24_11",
+      "2026.08.24_12",
+      "2026.08.24_13",
+      "2026.08.14_10"
+    ],
+    "num_sessions": 6
+  },
+  "temporal_split": {
+    "enabled": true,
+    "num_train_sessions": 5,
+    "num_val_sessions": 1,
+    "val_sessions": [
+      "2026.08.24_12"
+    ]
+  }
+}
