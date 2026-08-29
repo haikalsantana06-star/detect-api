@@ -1,0 +1,12 @@
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+torch>=2.0.0
+torchvision>=0.15.0
+python-multipart>=0.0.6
+python-dotenv>=1.0.0
+opencv-python>=4.8.0
+scikit-image>=0.21.0
+pillow>=10.0.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+mysql-connector-python>=8.0.0
