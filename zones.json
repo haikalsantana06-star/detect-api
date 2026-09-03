@@ -1,10 +1,5 @@
 {
-  "desks": [
-    "desk_a",
-    "desk_b",
-    "desk_c",
-    "desk_d"
-  ],
+  "desks": ["desk_a", "desk_b", "desk_c", "desk_d"],
   "person_map": {
     "desk_a": "Asep",
     "desk_b": "Budi",
@@ -65,12 +60,6 @@
       }
     }
   },
-  "classes": [
-    "empty",
-    "occupied"
-  ],
-  "input_size": [
-    96,
-    96
-  ]
+  "classes": ["empty", "occupied"],
+  "input_size": [96, 96]
 }
