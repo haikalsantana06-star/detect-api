@@ -1,10 +1,12 @@
 """FastAPI application for desk occupancy detection and management indicators."""
 import logging
 from pathlib import Path
-from datetime import date
+from datetime import datetime
+import json
 
 from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 
 from config import get_config, get_settings
 from schemas import DetectRequest, DetectResponse, DeskResult, HealthResponse
@@ -12,7 +14,7 @@ from stats_schemas import StatsResponse, DeskStatsResponse
 from model_loader import ModelLoader
 from pytorch_inference import run_inference
 from angle_detector import detect_angle
-from stats_computer import compute_stats, compute_desk_stats
+from stats_computer import compute_stats, compute_desk_stats, save_detection_logs
 
 logging.basicConfig(
     level=logging.INFO,
