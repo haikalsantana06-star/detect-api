@@ -24,8 +24,8 @@ from metrics import (
     cape_inference_duration_seconds,
     cape_inference_requests_total,
     cape_model_load_status,
-    generate_latest,
 )
+from prometheus_client import generate_latest
 from model_loader import ModelLoader
 from pytorch_inference import run_inference
 from schemas import DeskResult, DetectRequest, DetectResponse, HealthResponse
