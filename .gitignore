@@ -225,6 +225,9 @@ models/
 *.onnx
 
 #sample
+# Training scripts (local only)
+src/
+
 dataset/
 test_data/server.err
 server.log
