@@ -1,9 +1,10 @@
 """Load and cache PyTorch models per angle."""
-import torch
-import torch.nn as nn
-from torchvision import models
-from pathlib import Path
 import logging
+from pathlib import Path
+
+import torch
+from torch import nn
+from torchvision import models
 
 logger = logging.getLogger(__name__)
 

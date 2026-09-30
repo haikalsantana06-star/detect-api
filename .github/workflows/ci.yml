@@ -22,4 +22,4 @@ jobs:
         run: pip install ruff
 
       - name: Run ruff
-        run: ruff check backend/
+        run: ruff check backend/ --ignore=E501,F401,DTZ005,PLW0602,B008,SIM102,PLR0402

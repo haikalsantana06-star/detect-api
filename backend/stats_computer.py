@@ -1,9 +1,9 @@
 """Compute 5 management indicators from detection_logs in MySQL."""
-from datetime import datetime, date, time
 import logging
+from datetime import date, datetime, time
 
-from config import get_config, get_db_connection
-from stats_schemas import StatsResponse, Indicator, WorkHours
+from config import get_db_connection
+from stats_schemas import DeskStatsResponse, Indicator, StatsResponse, WorkHours
 
 logger = logging.getLogger(__name__)
 

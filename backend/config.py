@@ -18,7 +18,6 @@ from mysql.connector import pooling
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 # ---------------------------------------------------------------------------
 # DB connection pooling
 # ---------------------------------------------------------------------------

@@ -1,29 +1,36 @@
 """FastAPI application for desk occupancy detection and management indicators."""
 import logging
 from contextlib import asynccontextmanager
+from datetime import date, datetime
 from pathlib import Path
-from datetime import datetime, date
 
-from fastapi import FastAPI, HTTPException, File, UploadFile, Form, Query, status
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.security import HTTPBasicCredentials
 
-from config import get_config, get_settings, get_db_connection, init_db_pool, get_cached_stats, clear_stats_cache, _db_pool
-from schemas import DetectRequest, DetectResponse, DeskResult, HealthResponse
-from stats_schemas import StatsResponse, DeskStatsResponse
-from model_loader import ModelLoader
-from pytorch_inference import run_inference
 from angle_detector import detect_angle
-from stats_computer import compute_stats, compute_desk_stats
+from config import (
+    clear_stats_cache,
+    get_cached_stats,
+    get_config,
+    get_db_connection,
+    get_settings,
+    init_db_pool,
+)
 from metrics import (
-    generate_latest,
+    cape_db_connection_pool_active,
+    cape_detections_total,
     cape_inference_duration_seconds,
     cape_inference_requests_total,
-    cape_detections_total,
     cape_model_load_status,
-    cape_db_connection_pool_active,
+    generate_latest,
 )
+from model_loader import ModelLoader
+from pytorch_inference import run_inference
+from schemas import DeskResult, DetectRequest, DetectResponse, HealthResponse
+from stats_computer import compute_desk_stats, compute_stats
+from stats_schemas import DeskStatsResponse, StatsResponse
 
 logging.basicConfig(
     level=logging.INFO,
@@ -127,10 +134,13 @@ def detect(req: DetectRequest):
 
     angle = req.angle
     if angle is None:
-        import base64, numpy as np, cv2
+        import base64
+
+        import cv2
+        import numpy as np
         try:
             raw = base64.b64decode(req.image_base64)
-        except Exception:
+        except (ValueError, TypeError):
             raise HTTPException(status_code=400, detail="Invalid base64 image data")
         nparr = np.frombuffer(raw, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -191,7 +201,8 @@ async def detect_file(
     content = await file.read()
 
     if angle is None:
-        import numpy as np, cv2
+        import cv2
+        import numpy as np
         nparr = np.frombuffer(content, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if img is not None:
@@ -259,7 +270,8 @@ async def receive_esp32(
     content = await file.read()
 
     # Decode image for angle detection
-    import numpy as np, cv2
+    import cv2
+    import numpy as np
     nparr = np.frombuffer(content, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
@@ -296,15 +308,15 @@ async def receive_esp32(
         for desk, data in results.items():
             status = "occupied" if data["occupied"] else "empty"
             cape_detections_total.labels(desk=desk, status=status).inc()
-    except Exception as e:
-        logger.exception(f"Inference failed: {e}")
+    except Exception:
+        logger.exception("Inference failed")
         return "ERROR: Inference failed"
 
     # Save to MySQL detection_logs
     try:
         _save_detection_logs(results, angle, timestamp)
-    except Exception as e:
-        logger.exception(f"Failed to save to DB: {e}")
+    except Exception:
+        logger.exception("Failed to save to DB")
         return "ERROR: Database write failed"
 
     occupied_count = sum(1 for d in results.values() if d["occupied"])

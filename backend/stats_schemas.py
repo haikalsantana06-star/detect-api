@@ -1,6 +1,7 @@
 """Pydantic schemas for stats endpoints and 5 management indicators."""
-from pydantic import BaseModel, Field
 from typing import Any
+
+from pydantic import BaseModel
 
 
 class Indicator(BaseModel):

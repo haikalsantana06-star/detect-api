@@ -1,14 +1,15 @@
 """Inference engine: crop desk zones, preprocess, run PyTorch model in batches."""
 import base64
-import numpy as np
-from PIL import Image
-import torch
-from torchvision import transforms
-import cv2
 import logging
 
+import cv2
+import numpy as np
+import torch
+from PIL import Image
+from torchvision import transforms
+
+from config import Zone, get_config
 from model_loader import ModelLoader
-from config import get_config, Zone
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +93,7 @@ def run_inference(
             tensor = _crop_and_preprocess(img, zone)
             tensors.append(tensor)
             desk_names.append(desk)
-        except Exception as e:
+        except (ValueError, RuntimeError) as e:
             logger.error(f"Crop failed for {desk} (angle {angle}): {e}")
             # Use a zero tensor as placeholder; will be flagged as error
             tensors.append(torch.zeros(3, *IMG_SIZE))

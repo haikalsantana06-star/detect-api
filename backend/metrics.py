@@ -1,6 +1,6 @@
 """Prometheus metrics for CAPE API."""
 
-from prometheus_client import Counter, Histogram, Gauge, generate_latest
+from prometheus_client import Counter, Gauge, Histogram
 
 # Inference timing histogram (seconds)
 cape_inference_duration_seconds = Histogram(

@@ -1,10 +1,11 @@
 """SSIM-based angle auto-detection."""
-import cv2
-import numpy as np
-from pathlib import Path
-from skimage.metrics import structural_similarity as ssim
 import json
 import logging
+from pathlib import Path
+
+import cv2
+import numpy as np
+from skimage.metrics import structural_similarity as ssim
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,7 @@ def detect_angle(image_path: str | Path | np.ndarray) -> str | None:
                 s = ssim(crop, ref_desks[d], data_range=255)
                 score += s
                 valid += 1
-            except Exception as e:
+            except (ValueError, RuntimeError) as e:
                 logger.warning(f"SSIM error for angle={angle_name}, desk={d}: {e}")
                 continue
 
