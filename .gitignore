@@ -226,4 +226,6 @@ models/
 
 #sample
 dataset/
-test_data/
+test_data/server.err
+server.log
+trash/
