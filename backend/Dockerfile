@@ -34,7 +34,7 @@ COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application source
-COPY main.py config.py schemas.py stats_schemas.py stats_computer.py model_loader.py pytorch_inference.py angle_detector.py start.sh ./
+COPY main.py config.py schemas.py stats_schemas.py stats_computer.py model_loader.py pytorch_inference.py angle_detector.py metrics.py zones.json start.sh ./
 
 # Environment variables (override via Railway dashboard)
 ENV PYTHONUNBUFFERED=1
@@ -52,7 +52,7 @@ RUN mkdir -p models
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 # Run startup script (reads PORT env)
 CMD ["bash", "start.sh"]
