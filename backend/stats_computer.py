@@ -1,9 +1,8 @@
 """Compute 5 management indicators from detection_logs in MySQL."""
-import mysql.connector
 from datetime import datetime, date, time
 import logging
 
-from config import get_config
+from config import get_config, get_db_connection
 from stats_schemas import StatsResponse, Indicator, WorkHours
 
 logger = logging.getLogger(__name__)
@@ -11,18 +10,6 @@ logger = logging.getLogger(__name__)
 WORK_START = time(7, 0)
 WORK_END = time(17, 0)
 DETECTION_INTERVAL_MINUTES = 5
-
-
-def _get_db_connection():
-    """Create a MySQL connection using config."""
-    cfg = get_config()
-    return mysql.connector.connect(
-        host=cfg.db_host,
-        port=cfg.db_port,
-        database=cfg.db_name,
-        user=cfg.db_user,
-        password=cfg.db_password,
-    )
 
 
 def _parse_datetime(dt_val) -> datetime | None:
@@ -141,7 +128,7 @@ def _build_indicators(
 
 def compute_stats(person: str, target_date: date) -> StatsResponse:
     """Compute 5 management indicators for a person on a given date."""
-    conn = _get_db_connection()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     query = """
@@ -186,7 +173,7 @@ def compute_stats(person: str, target_date: date) -> StatsResponse:
 
 def compute_desk_stats(desk: str, target_date: date) -> StatsResponse:
     """Compute 5 management indicators for a desk on a given date."""
-    conn = _get_db_connection()
+    conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     query = """
@@ -221,8 +208,8 @@ def compute_desk_stats(desk: str, target_date: date) -> StatsResponse:
     all_times = [dt for dt, _ in detections if WORK_START <= dt.time() <= WORK_END]
 
     work_hours = WorkHours(start="07:00", end="17:00", total_minutes=600)
-    return StatsResponse(
-        person=desk,
+    return DeskStatsResponse(
+        desk=desk,
         date=target_date.isoformat(),
         work_hours=work_hours,
         indicators=_build_indicators(occupied_in_work_hours, detections, all_times),

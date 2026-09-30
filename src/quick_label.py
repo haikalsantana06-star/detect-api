@@ -6,18 +6,17 @@ images using OpenCV rectangle selection. The coordinates are saved to zones.json
 
 Usage:
     python quick_label.py --angle angle_1
-    python quick_label.py --angle angle_2
-    python quick_label.py --angle angle_3
+    python quick_label.py --angle angle_2 --desks 3
+    python quick_label.py --angle angle_3 --desks 4
 
 Workflow:
     1. User manually groups images into dataset/sorted/angle_1 ... angle_6
-    2. User runs: python quick_label.py --angle angle_1
+    2. User runs: python quick_label.py --angle angle_1 --desks 3
     3. Program opens a reference image for that angle
-    4. User draws exactly 3 bounding boxes in order:
+    4. User draws exactly N bounding boxes in order:
        - First rectangle = desk_a
        - Second rectangle = desk_b
-       - Third rectangle = desk_c
-       - Fourth rectangle = desk_d
+       ... (up to desk_d if --desks 4)
     5. Coordinates are saved into zones.json
     6. User runs: python auto_crop.py --angle angle_1
     7. Crops are saved to dataset/crops/{desk}/to_sort/
@@ -35,7 +34,11 @@ import cv2
 import numpy as np
 
 
-DESK_NAMES = ['desk_a', 'desk_b', 'desk_c', 'desk_d']
+DEFAULT_DESK_NAMES = ['desk_a', 'desk_b', 'desk_c', 'desk_d']
+
+def _make_desk_names(num_desks):
+    """Generate desk names dynamically: desk_a, desk_b, ..."""
+    return [f'desk_{chr(97+i)}' for i in range(num_desks)]
 
 
 class ROILabeler:
@@ -46,7 +49,7 @@ class ROILabeler:
     desk regions. Each desk is labeled in order (desk_a, desk_b, desk_c).
     """
 
-    def __init__(self, image_path, angle_name, zones_path='zones.json'):
+    def __init__(self, image_path, angle_name, zones_path='zones.json', num_desks=4):
         """
         Initialize the ROI labeler.
 
@@ -54,10 +57,13 @@ class ROILabeler:
             image_path: Path to reference image
             angle_name: Name of the angle being labeled (e.g., 'angle_1')
             zones_path: Path to zones.json configuration file
+            num_desks: Number of desks to label (default: 4)
         """
         self.image_path = Path(image_path)
         self.angle_name = angle_name
         self.zones_path = Path(zones_path)
+        self.num_desks = num_desks
+        self.desk_names = _make_desk_names(num_desks)
 
         self.image = cv2.imread(str(image_path))
         if self.image is None:
@@ -82,7 +88,7 @@ class ROILabeler:
                 return json.load(f)
         else:
             return {
-                'desks': DESK_NAMES.copy(),
+                'desks': self.desk_names.copy(),
                 'zones': {},
                 'classes': ['empty', 'occupied'],
                 'input_size': [96, 96]
@@ -155,7 +161,7 @@ class ROILabeler:
             color = colors[i % len(colors)]
             cv2.rectangle(self.image, (x, y), (x + w, y + h), color, 2)
 
-            label = DESK_NAMES[i] if i < len(DESK_NAMES) else f'rect_{i}'
+            label = self.desk_names[i] if i < len(self.desk_names) else f'rect_{i}'
             cv2.putText(
                 self.image,
                 label,
@@ -168,13 +174,14 @@ class ROILabeler:
 
     def _draw_instructions(self):
         """Draw instructions on the image."""
+        desk_list = ', '.join(self.desk_names)
         instructions = [
-            f"Draw rectangles for: {', '.join(DESK_NAMES)}",
+            f"Draw rectangles for: {desk_list}",
             "Left-click & drag: Draw rectangle",
             "Right-click: Undo last rectangle",
             "Press ENTER when done",
             "Press ESC to cancel",
-            f"Progress: {len(self.rectangles)}/{len(DESK_NAMES)}"
+            f"Progress: {len(self.rectangles)}/{self.num_desks}"
         ]
 
         y_offset = 30
@@ -204,13 +211,12 @@ class ROILabeler:
         print(f"\n{'='*60}")
         print(f"ROI Labeling: {self.angle_name}")
         print(f"Image: {self.image_path.name} ({self.width}x{self.height})")
+        print(f"Desks to label: {self.num_desks} ({', '.join(self.desk_names)})")
         print(f"{'='*60}")
         print("\nInstructions:")
-        print("  1. Draw exactly 3 rectangles in order:")
-        print("     - First rectangle = desk_a")
-        print("     - Second rectangle = desk_b")
-        print("     - Third rectangle = desk_c")
-        print("     - Fourth rectangle = desk_d")
+        desk_list = ', '.join(self.desk_names)
+        print(f"  1. Draw exactly {self.num_desks} rectangles in order:")
+        print(f"     - {desk_list}")
         print("  2. Left-click and drag to draw")
         print("  3. Right-click to undo last rectangle")
         print("  4. Press ENTER when done")
@@ -227,8 +233,8 @@ class ROILabeler:
             key = cv2.waitKey(1) & 0xFF
 
             # Check if we have enough rectangles
-            if len(self.rectangles) >= len(DESK_NAMES):
-                print(f"\nAll {len(DESK_NAMES)} rectangles drawn!")
+            if len(self.rectangles) >= self.num_desks:
+                print(f"\nAll {self.num_desks} rectangles drawn!")
                 print("Press ENTER to save, ESC to cancel and restart")
 
             # ESC key
@@ -239,10 +245,10 @@ class ROILabeler:
 
             # ENTER key
             elif key == 13:
-                if len(self.rectangles) >= len(DESK_NAMES):
+                if len(self.rectangles) >= self.num_desks:
                     break
                 else:
-                    print(f"Please draw at least {len(DESK_NAMES)} rectangles first.")
+                    print(f"Please draw at least {self.num_desks} rectangles first.")
 
         # Save the zones
         self._save_zones_to_json()
@@ -257,8 +263,8 @@ class ROILabeler:
 
         # Save each rectangle as a zone
         for i, rect in enumerate(self.rectangles):
-            if i < len(DESK_NAMES):
-                desk_name = DESK_NAMES[i]
+            if i < len(self.desk_names):
+                desk_name = self.desk_names[i]
                 x, y, w, h = rect
                 self.zones['zones'][self.angle_name][desk_name] = {
                     'x': x,
@@ -269,7 +275,7 @@ class ROILabeler:
                 print(f"  {desk_name}: x={x}, y={y}, w={w}, h={h}")
 
         if 'desks' not in self.zones:
-            self.zones['desks'] = DESK_NAMES.copy()
+            self.zones['desks'] = self.desk_names.copy()
 
         #save filess
         self._save_zones()
@@ -311,12 +317,12 @@ def main():
         epilog="""
 Examples:
   python quick_label.py --angle angle_1
-  python quick_label.py --angle angle_2
-  python quick_label.py --angle angle_3
+  python quick_label.py --angle angle_1 --desks 3
+  python quick_label.py --angle angle_2 --desks 4
 
 Workflow:
-  1. python quick_label.py --angle angle_1
-  2. Draw 3 rectangles on the reference image
+  1. python quick_label.py --angle angle_1 --desks 3
+  2. Draw N rectangles on the reference image
   3. Coordinates saved to zones.json
   4. python auto_crop.py --angle angle_1
   5. Label crops manually (move to empty/ or occupied/)
@@ -329,6 +335,13 @@ Workflow:
         type=str,
         required=True,
         help='Angle to label (e.g., angle_1, angle_2, ...)'
+    )
+    parser.add_argument(
+        '--desks',
+        type=int,
+        default=4,
+        choices=[2, 3, 4],
+        help='Number of desks to label (2, 3, or 4). Default: 4'
     )
     parser.add_argument(
         '--sorted-dir',
@@ -360,9 +373,10 @@ Workflow:
             image_path = get_reference_image(args.angle, args.sorted_dir)
 
         print(f"Using reference image: {image_path}")
+        print(f"Number of desks: {args.desks}")
 
         # Run labeler
-        labeler = ROILabeler(image_path, args.angle, args.zones)
+        labeler = ROILabeler(image_path, args.angle, args.zones, num_desks=args.desks)
         success = labeler.run()
 
         if success:

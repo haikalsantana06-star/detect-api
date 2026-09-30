@@ -1,4 +1,4 @@
-"""Inference engine: crop desk zones, preprocess, run PyTorch model."""
+"""Inference engine: crop desk zones, preprocess, run PyTorch model in batches."""
 import base64
 import numpy as np
 from PIL import Image
@@ -60,7 +60,10 @@ def run_inference(
     model_loader: ModelLoader,
 ) -> dict[str, dict]:
     """
-    Run inference on an image for a given angle.
+    Run batched inference on an image for a given angle.
+
+    Crops ALL desk zones first, stacks into one batch tensor, runs a single
+    forward pass, then extracts probabilities per desk.
 
     Args:
         image_source: Base64 string or raw bytes of the image
@@ -77,30 +80,43 @@ def run_inference(
     angle_zones = config.zones.get(angle, {})
     person_map = config.person_map
 
-    results = {}
+    if not angle_zones:
+        return {}
+
+    # Step 1: Crop all zones and collect tensors
+    tensors: list[torch.Tensor] = []
+    desk_names: list[str] = []
 
     for desk, zone in angle_zones.items():
         try:
             tensor = _crop_and_preprocess(img, zone)
-            tensor = tensor.unsqueeze(0).to(model_loader.device)
-
-            with torch.no_grad():
-                output = model(tensor)
-                output = output.view(-1)
-                probability = torch.sigmoid(output).item()
-                is_occupied = probability >= threshold
-
-            results[desk] = {
-                "occupied": is_occupied,
-                "confidence": round(float(probability), 4),
-                "person": person_map.get(desk, desk),
-            }
+            tensors.append(tensor)
+            desk_names.append(desk)
         except Exception as e:
-            logger.error(f"Inference failed for {desk} (angle {angle}): {e}")
-            results[desk] = {
-                "occupied": False,
-                "confidence": 0.0,
-                "person": person_map.get(desk, desk),
-            }
+            logger.error(f"Crop failed for {desk} (angle {angle}): {e}")
+            # Use a zero tensor as placeholder; will be flagged as error
+            tensors.append(torch.zeros(3, *IMG_SIZE))
+            desk_names.append(desk)
+
+    # Step 2: Stack into single batch tensor [N, C, H, W]
+    batch_tensor = torch.stack(tensors).to(model_loader.device)
+
+    # Step 3: Single forward pass for all desks
+    with torch.no_grad():
+        outputs = model(batch_tensor)
+        outputs = outputs.view(-1)
+        probabilities = torch.sigmoid(outputs)
+
+    # Step 4: Extract results per desk
+    results = {}
+    for i, desk in enumerate(desk_names):
+        probability = probabilities[i].item()
+        is_occupied = probability >= threshold
+
+        results[desk] = {
+            "occupied": is_occupied,
+            "confidence": round(float(probability), 4),
+            "person": person_map.get(desk, desk),
+        }
 
     return results

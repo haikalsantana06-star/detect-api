@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 _refs_cache: dict[str, dict[str, np.ndarray]] = {}
 _zones_cache: dict | None = None
 
+# Minimum SSIM score to accept an angle match
+SSIM_THRESHOLD = 0.7  # Raised from 0.1 (was too permissive)
+
 
 def _load_zones() -> dict:
     global _zones_cache
@@ -46,7 +49,6 @@ def _build_ssim_references(sorted_dir: str = "dataset/sorted") -> dict[str, dict
         return _refs_cache
 
     all_zones = _load_zones()
-    desks = ["desk_a", "desk_b", "desk_c", "desk_d"]
 
     for angle_folder in sorted_path.iterdir():
         if not angle_folder.is_dir():
@@ -66,7 +68,9 @@ def _build_ssim_references(sorted_dir: str = "dataset/sorted") -> dict[str, dict
         if angle_name not in all_zones:
             continue
 
-        desk_crops: dict[str, list[np.ndarray]] = {d: [] for d in desks}
+        # Get desk names dynamically from zones.json
+        desks_in_angle = list(all_zones[angle_name].keys())
+        desk_crops: dict[str, list[np.ndarray]] = {d: [] for d in desks_in_angle}
 
         for img_path in img_files:
             img_cv = cv2.imread(str(img_path))
@@ -74,7 +78,7 @@ def _build_ssim_references(sorted_dir: str = "dataset/sorted") -> dict[str, dict
                 continue
             gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
 
-            for d in desks:
+            for d in desks_in_angle:
                 if d not in all_zones[angle_name]:
                     continue
                 z = all_zones[angle_name][d]
@@ -82,9 +86,10 @@ def _build_ssim_references(sorted_dir: str = "dataset/sorted") -> dict[str, dict
                 if crop.size > 0:
                     desk_crops[d].append(crop)
 
-        if all(desk_crops[d] for d in desks):
+        # Only save if ALL desks in this angle have crops
+        if all(desk_crops[d] for d in desks_in_angle):
             _refs_cache[angle_name] = {}
-            for d in desks:
+            for d in desks_in_angle:
                 stack = np.stack(desk_crops[d])
                 _refs_cache[angle_name][d] = np.mean(stack, axis=0)
 
@@ -111,16 +116,19 @@ def detect_angle(image_path: str | Path | np.ndarray) -> str | None:
 
     gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
     all_zones = _load_zones()
-    desks = ["desk_a", "desk_b", "desk_c", "desk_d"]
 
     angle_scores: dict[str, float] = {}
 
     for angle_name, ref_desks in refs.items():
         if angle_name not in all_zones:
             continue
+
+        # Get desk names dynamically from zones.json for this angle
+        desks_in_angle = list(all_zones[angle_name].keys())
         score = 0.0
         valid = 0
-        for d in desks:
+
+        for d in desks_in_angle:
             if d not in ref_desks or d not in all_zones[angle_name]:
                 continue
             z = all_zones[angle_name][d]
@@ -131,8 +139,10 @@ def detect_angle(image_path: str | Path | np.ndarray) -> str | None:
                 s = ssim(crop, ref_desks[d], data_range=255)
                 score += s
                 valid += 1
-            except Exception:
+            except Exception as e:
+                logger.warning(f"SSIM error for angle={angle_name}, desk={d}: {e}")
                 continue
+
         if valid > 0:
             angle_scores[angle_name] = score / valid
 
@@ -142,7 +152,11 @@ def detect_angle(image_path: str | Path | np.ndarray) -> str | None:
     best_angle = max(angle_scores, key=angle_scores.get)
     best_score = angle_scores[best_angle]
 
-    if best_score < 0.1:
+    if best_score < SSIM_THRESHOLD:
+        logger.warning(
+            f"Angle detection score too low: {best_score:.3f} < {SSIM_THRESHOLD}. "
+            f"Returning None (will default to angle_1)."
+        )
         return None
 
     logger.info(f"Detected angle: {best_angle} (score: {best_score:.3f})")

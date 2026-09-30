@@ -1,0 +1,37 @@
+name: Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+  API_URL: ${{ secrets.RAILWAY_API_URL }}
+
+jobs:
+  deploy:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Deploy
+        run: railway up --service cape-api
+        working-directory: backend
+
+      - name: Health check
+        run: |
+          sleep 15
+          if [ -n "$API_URL" ]; then
+            echo "Checking: https://$API_URL/health"
+            curl -sf "https://$API_URL/health" || exit 1
+            echo "Health check passed"
+          else
+            echo "API_URL not set — skipping health check"
+          fi

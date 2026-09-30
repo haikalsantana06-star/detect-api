@@ -218,6 +218,12 @@ __marimo__/
 .streamlit/secrets.toml
 
 
+# Model weights — keep in Railway volume, not in Git
+models/
+*.pt
+*.pth
+*.onnx
+
 #sample
 dataset/
 test_data/

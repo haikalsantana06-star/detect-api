@@ -1,0 +1,26 @@
+# CAPE API - FastAPI Service
+
+[Unit]
+Description=CAPE Desk Occupancy Detection API
+After=network.target mysql.service mariadb.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/cape
+Environment="PATH=/opt/cape/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/opt/cape/venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+# Optional: graceful shutdown timeout
+KillMode=mixed
+TimeoutStopSec=30
+
+# If using a virtual environment, uncomment and set path:
+# VENV_PATH=/opt/cape/venv
+
+[Install]
+WantedBy=multi-user.target

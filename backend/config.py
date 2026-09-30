@@ -9,12 +9,67 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from mysql.connector import pooling
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+# ---------------------------------------------------------------------------
+# DB connection pooling
+# ---------------------------------------------------------------------------
+
+_db_pool: pooling.MySQLConnectionPool | None = None
+
+
+def init_db_pool(config: Config) -> None:
+    """Initialize the MySQL connection pool at startup."""
+    global _db_pool
+    _db_pool = pooling.MySQLConnectionPool(
+        pool_name="cape_pool",
+        pool_size=5,
+        host=config.db_host,
+        port=config.db_port,
+        database=config.db_name,
+        user=config.db_user,
+        password=config.db_password,
+    )
+
+
+def get_db_connection():
+    """Get a connection from the pool. Caller must close when done."""
+    if _db_pool is None:
+        raise RuntimeError("DB pool not initialized. Call init_db_pool() first.")
+    return _db_pool.get_connection()
+
+
+# ---------------------------------------------------------------------------
+# In-memory TTL cache for stats endpoints
+# ---------------------------------------------------------------------------
+
+_cache: dict[str, tuple[datetime, Any]] = {}
+
+
+def get_cached_stats(key: str, compute_fn, ttl_seconds: int = 60):
+    """Return cached value if fresh, otherwise compute and cache it."""
+    now = datetime.now()
+    if key in _cache:
+        ts, val = _cache[key]
+        if (now - ts).total_seconds() < ttl_seconds:
+            return val
+    val = compute_fn()
+    _cache[key] = (now, val)
+    return val
+
+
+def clear_stats_cache():
+    """Clear the stats cache (useful after new detections are saved)."""
+    global _cache
+    _cache.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -53,6 +108,10 @@ class Settings(BaseSettings):
     device: str = "cpu"
     model_dir: str = "models"
     zones_path: str = "zones.json"
+    allowed_origins: list[str] = Field(
+        default=["http://localhost:5173", "http://localhost:3000"],
+        description="Comma-separated CORS allowed origins",
+    )
     db: DBSettings = Field(default_factory=DBSettings)
 
 
@@ -84,6 +143,7 @@ class Config:
     threshold: float = 0.5
     device: str = "cpu"
     model_dir: str = "models"
+    allowed_origins: list[str] = field(default_factory=lambda: ["http://localhost:5173", "http://localhost:3000"])
     db_host: str = "localhost"
     db_port: int = 3306
     db_name: str = "upitas_mon"
@@ -140,6 +200,7 @@ def load_config(settings: Settings) -> Config:
         threshold=settings.threshold,
         device=settings.device,
         model_dir=settings.model_dir,
+        allowed_origins=settings.allowed_origins,
         db_host=db.host,
         db_port=db.port,
         db_name=db.name,
