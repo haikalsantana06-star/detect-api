@@ -14,9 +14,15 @@ RUN pip install --no-cache-dir torch==2.1.0 torchvision==0.16.0 \
     --index-url https://download.pytorch.org/whl/cpu || \
     pip install --no-cache-dir torch==2.1.0 torchvision==0.16.0
 
+# Ensure numpy<2 for PyTorch 2.1 compatibility
+RUN pip install --no-cache-dir "numpy<2"
+
 # Copy requirements and install other dependencies
 COPY requirements-docker.txt .
 RUN pip install --no-cache-dir -r requirements-docker.txt
+
+# Force numpy<2 again to override any transitive upgrade
+RUN pip install --no-cache-dir "numpy<2"
 
 # ============================================
 # Stage 2: Runtime - Production image

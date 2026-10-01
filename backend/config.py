@@ -171,9 +171,9 @@ def load_config(settings: Settings) -> Config:
     """
     zones_file = Path(settings.zones_path)
 
-    # Resolve relative paths from the detect-api directory
+    # Resolve relative paths from the app directory
     if not zones_file.is_absolute():
-        zones_file = Path(__file__).parent.parent / settings.zones_path
+        zones_file = Path(__file__).parent / settings.zones_path
 
     with open(zones_file, encoding="utf-8") as fh:
         raw: dict[str, Any] = json.load(fh)
