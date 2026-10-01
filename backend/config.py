@@ -175,6 +175,12 @@ def load_config(settings: Settings) -> Config:
     if not zones_file.is_absolute():
         zones_file = Path(__file__).parent / settings.zones_path
 
+    # If still not found and zones_path looks like just a filename, try cwd
+    if not zones_file.exists() and "/" not in str(settings.zones_path) and "\\" not in str(settings.zones_path):
+        cwd_zones = Path.cwd() / settings.zones_path
+        if cwd_zones.exists():
+            zones_file = cwd_zones
+
     with open(zones_file, encoding="utf-8") as fh:
         raw: dict[str, Any] = json.load(fh)
 
