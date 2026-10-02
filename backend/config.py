@@ -79,16 +79,44 @@ def clear_stats_cache():
 # ---------------------------------------------------------------------------
 
 
-class DBSettings(BaseSettings):
-    """Database connection settings for MySQL."""
+def _parse_mysql_url(url: str) -> dict:
+    """Parse mysql://user:pass@host:port/db into components."""
+    from urllib.parse import urlparse
+    if not url or url == "NOT_SET":
+        return {}
+    parsed = urlparse(url)
+    return {
+        "user": parsed.username or "",
+        "password": parsed.password or "",
+        "host": parsed.hostname or "NOT_SET",
+        "port": parsed.port or 3306,
+        "name": parsed.path.lstrip("/") or "railway",
+    }
 
-    model_config = SettingsConfigDict(env_prefix="DB_", env_nested_delimiter="__")
+
+class DBSettings(BaseSettings):
+    """Database connection settings for MySQL — reads DB__* vars or MYSQL_PRIVATE_URL."""
+
+    model_config = SettingsConfigDict(env_prefix="DB_", env_nested_delimiter="__", extra="ignore")
 
     host: str = "NOT_SET"
     port: int = 3306
     name: str = "NOT_SET"
     user: str = ""
     password: str = ""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # If individual DB vars not set, try to parse from MYSQL_PRIVATE_URL
+        import os
+        mysql_url = os.environ.get("MYSQL_PRIVATE_URL", "")
+        if self.host == "NOT_SET" and mysql_url:
+            parsed = _parse_mysql_url(mysql_url)
+            self.host = parsed.get("host", "NOT_SET")
+            self.port = parsed.get("port", 3306)
+            self.name = parsed.get("name", "railway")
+            self.user = parsed.get("user", "")
+            self.password = parsed.get("password", "")
 
 
 # ---------------------------------------------------------------------------
