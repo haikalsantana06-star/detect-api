@@ -219,11 +219,6 @@ __marimo__/
 
 
 # Model weights — keep in Railway volume, not in Git
-models/
-*.pt
-*.pth
-*.onnx
-
 #sample
 # Training scripts (local only)
 src/
