@@ -223,6 +223,12 @@ __marimo__/
 # Training scripts (local only)
 src/
 
+# Local copy of SSIM references (use backend/dataset/sorted for Railway)
+dataset/
+
+# But track the one in backend/ for Docker
+!backend/dataset/
+
 dataset/
 test_data/server.err
 server.log
