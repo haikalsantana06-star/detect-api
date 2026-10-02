@@ -28,6 +28,9 @@ _db_pool: pooling.MySQLConnectionPool | None = None
 def init_db_pool(config: Config) -> None:
     """Initialize the MySQL connection pool at startup."""
     global _db_pool
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[db] host={config.db_host} port={config.db_port} name={config.db_name} user={config.db_user}")
     _db_pool = pooling.MySQLConnectionPool(
         pool_name="cape_pool",
         pool_size=5,
@@ -79,11 +82,11 @@ def clear_stats_cache():
 class DBSettings(BaseSettings):
     """Database connection settings for MySQL."""
 
-    model_config = SettingsConfigDict(env_prefix="DB_")
+    model_config = SettingsConfigDict(env_prefix="DB_", env_nested_delimiter="__")
 
-    host: str = "localhost"
+    host: str = "NOT_SET"
     port: int = 3306
-    name: str = "upitas_mon"
+    name: str = "NOT_SET"
     user: str = ""
     password: str = ""
 
