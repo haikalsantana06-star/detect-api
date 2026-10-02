@@ -107,10 +107,10 @@ class DBSettings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # If individual DB vars not set, try to parse from MYSQL_PRIVATE_URL
+        # If individual DB vars not set (or empty), try to parse from MYSQL_PRIVATE_URL
         import os
         mysql_url = os.environ.get("MYSQL_PRIVATE_URL", "")
-        if self.host == "NOT_SET" and mysql_url:
+        if (self.host in ("NOT_SET", "") or not self.host) and mysql_url:
             parsed = _parse_mysql_url(mysql_url)
             self.host = parsed.get("host", "NOT_SET")
             self.port = parsed.get("port", 3306)
