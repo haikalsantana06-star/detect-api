@@ -42,6 +42,10 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application source
 COPY main.py config.py schemas.py stats_schemas.py stats_computer.py model_loader.py pytorch_inference.py angle_detector.py metrics.py zones.json start.sh ./
 
+# Copy model weights and SSIM reference images (from repo root)
+COPY models/ ./models/
+COPY dataset/sorted/ ./dataset/sorted/
+
 # Environment variables (override via Railway dashboard)
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -51,10 +55,12 @@ ENV ZONES_PATH=zones.json
 ENV THRESHOLD=0.5
 
 # Railway provides PORT env var
-# Database env vars set via Railway dashboard: DB__HOST, DB__PORT, DB__NAME, DB__USER, DB__PASSWORD
-
-# Create models dir
-RUN mkdir -p models
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV DEVICE=cpu
+ENV MODEL_DIR=models
+ENV ZONES_PATH=zones.json
+ENV THRESHOLD=0.5
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
