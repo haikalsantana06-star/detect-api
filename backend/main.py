@@ -370,6 +370,11 @@ def _save_detection_logs(results: dict, angle: str, timestamp: datetime):
     cape_db_connection_pool_active.dec()
 
 
+# ---------------------------------------------------------------------------
+# Original Stats Endpoints
+# ---------------------------------------------------------------------------
+
+
 @app.get("/stats/{person}", response_model=StatsResponse)
 def get_stats_by_person(
     person: str,

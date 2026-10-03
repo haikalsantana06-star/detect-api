@@ -121,8 +121,15 @@ def _build_indicators(
     occupied_in_work_hours: list,
     detections: list,
     all_times: list,
+    work_start: time | None = None,
+    work_end: time | None = None,
 ) -> dict[str, Indicator]:
     """Build the 5 indicator objects from computed values."""
+    # Use config values if not explicitly provided
+    if work_start is None:
+        work_start = _get_work_start()
+    if work_end is None:
+        work_end = _get_work_end()
     tingkat_kehadiran = len(occupied_in_work_hours) > 0
 
     ketepatan_datang = "N/A"
@@ -137,16 +144,17 @@ def _build_indicators(
         diff_minutes = int((last_seen_dt - first_seen_dt).total_seconds() / 60)
         lama_bekerja = min(diff_minutes, 600)
 
+    interval = _get_interval_minutes()
     productive_minutes = 0
     unproductive_minutes = 0
     for dt, occ in detections:
         if not occ:
             continue
         t = dt.time()
-        if WORK_START <= t <= WORK_END:
-            productive_minutes += DETECTION_INTERVAL_MINUTES
+        if work_start <= t <= work_end:
+            productive_minutes += interval
         else:
-            unproductive_minutes += DETECTION_INTERVAL_MINUTES
+            unproductive_minutes += interval
 
     return {
         "tingkat_kehadiran": Indicator(
@@ -189,7 +197,7 @@ def compute_stats(person: str, target_date: date) -> StatsResponse:
         SELECT image_timestamp, occupied
         FROM detection_logs
         WHERE person = %s
-          AND DATE(image_timestamp) = %s
+          AND DATE(DATE_ADD(image_timestamp, INTERVAL 7 HOUR)) = %s
         ORDER BY image_timestamp ASC
     """
     cursor.execute(query, (person, target_date.isoformat()))
@@ -229,7 +237,7 @@ def compute_stats(person: str, target_date: date) -> StatsResponse:
         person=person,
         date=target_date.isoformat(),
         work_hours=work_hours,
-        indicators=_build_indicators(occupied_in_work_hours, detections, all_times),
+        indicators=_build_indicators(occupied_in_work_hours, detections, all_times, work_start, work_end),
     )
 
 
@@ -242,7 +250,7 @@ def compute_desk_stats(desk: str, target_date: date) -> StatsResponse:
         SELECT image_timestamp, occupied
         FROM detection_logs
         WHERE desk = %s
-          AND DATE(image_timestamp) = %s
+          AND DATE(DATE_ADD(image_timestamp, INTERVAL 7 HOUR)) = %s
         ORDER BY image_timestamp ASC
     """
     cursor.execute(query, (desk, target_date.isoformat()))
@@ -275,13 +283,13 @@ def compute_desk_stats(desk: str, target_date: date) -> StatsResponse:
     work_hours = WorkHours(
         start=work_start.strftime("%H:%M"),
         end=work_end.strftime("%H:%M"),
-        total_minutes=600
+        total_minutes=int((datetime.combine(target_date, work_end) - datetime.combine(target_date, work_start)).total_seconds() / 60)
     )
     return DeskStatsResponse(
         desk=desk,
         date=target_date.isoformat(),
         work_hours=work_hours,
-        indicators=_build_indicators(occupied_in_work_hours, detections, all_times),
+        indicators=_build_indicators(occupied_in_work_hours, detections, all_times, work_start, work_end),
     )
 
 
@@ -508,7 +516,8 @@ def compute_aggregate(
     # On-time stats
     tolerance = _get_tolerance_minutes()
     work_start = _get_work_start()
-    tolerance_time = time(work_start.hour, work_start.minute + tolerance)
+    tolerance_total_mins = work_start.hour * 60 + work_start.minute + tolerance
+    tolerance_time = time(tolerance_total_mins // 60, tolerance_total_mins % 60)
 
     on_time_count = 0
     arrival_times: list[str] = []
