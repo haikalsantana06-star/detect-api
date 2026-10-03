@@ -1,5 +1,6 @@
 # ============================================
 # Stage 1: Builder - Install dependencies
+# Force rebuild: 2024-10-04
 # ============================================
 FROM python:3.10-slim AS builder
 
