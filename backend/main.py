@@ -378,10 +378,10 @@ def _save_detection_logs(results: dict, angle: str, timestamp: datetime):
 @app.get("/stats/{person}", response_model=StatsResponse)
 def get_stats_by_person(
     person: str,
-    date: date = Query(default=None, description="Date in YYYY-MM-DD format, defaults to today"),
+    target_date_param: date | None = Query(default=None, description="Date in YYYY-MM-DD format, defaults to today"),
 ):
     """Get 5 management indicators for a person on a given date."""
-    target_date = date if date is not None else date.today()
+    target_date = target_date_param if target_date_param is not None else datetime.date.today()
     cache_key = f"stats:person:{person}:{target_date.isoformat()}"
 
     def compute():
@@ -400,7 +400,7 @@ def get_stats_by_desk(
     date: date = Query(default=None, description="Date in YYYY-MM-DD format, defaults to today"),
 ):
     """Get 5 management indicators for a desk on a given date."""
-    target_date = date if date is not None else date.today()
+    target_date = target_date_param if target_date_param is not None else datetime.date.today()
     cache_key = f"stats:desk:{desk}:{target_date.isoformat()}"
 
     def compute():
