@@ -142,6 +142,13 @@ class Settings(BaseSettings):
         default=["http://localhost:5173", "http://localhost:3000"],
         description="Comma-separated CORS allowed origins",
     )
+    # Work hours & detection settings
+    work_start_time: str = "07:00"          # HH:MM in Asia/Jakarta
+    work_end_time: str = "17:00"           # HH:MM in Asia/Jakarta
+    arrival_tolerance_minutes: int = 15     # grace period for on-time arrival
+    presence_threshold: float = 0.5         # confidence threshold (same as THRESHOLD)
+    detection_interval_minutes: int = 5     # photos taken every N minutes
+    timezone: str = "Asia/Jakarta"
     db: DBSettings = Field(default_factory=DBSettings)
 
 

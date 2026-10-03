@@ -29,8 +29,25 @@ from prometheus_client import generate_latest
 from model_loader import ModelLoader
 from pytorch_inference import run_inference
 from schemas import DeskResult, DetectRequest, DetectResponse, HealthResponse
-from stats_computer import compute_desk_stats, compute_stats
-from stats_schemas import DeskStatsResponse, StatsResponse
+from stats_computer import (
+    compute_aggregate,
+    compute_daily_stats,
+    compute_desk_stats,
+    compute_person_comparison,
+    compute_stats,
+    compute_trend_series,
+    get_available_dates,
+)
+from stats_schemas import (
+    AggregateStats,
+    AvailableDates,
+    DailyStats,
+    DeskStatsResponse,
+    PersonComparison,
+    PresenceStatus,
+    StatsResponse,
+    TrendPoint,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -389,6 +406,199 @@ def get_stats_by_desk(
     except Exception as e:
         logger.exception(f"Stats computation failed for desk={desk}, date={target_date}")
         raise HTTPException(status_code=500, detail=f"Failed to compute stats: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Enhanced Stats Endpoints
+# ---------------------------------------------------------------------------
+
+
+@app.get("/stats/available-dates", response_model=AvailableDates)
+def get_available_dates_endpoint(
+    person: str | None = Query(None, description="Filter by person"),
+    year_month: str | None = Query(None, description="YYYY-MM filter"),
+):
+    """
+    Return list of dates that have detection data.
+    Frontend uses this to populate date/week/month selectors.
+    """
+    cache_key = f"available_dates:{person}:{year_month}"
+
+    def compute():
+        dates = get_available_dates(person=person, year_month=year_month)
+        return AvailableDates(dates=dates)
+
+    try:
+        return get_cached_stats(cache_key, compute, ttl_seconds=60)
+    except Exception as e:
+        logger.exception("Failed to get available dates")
+        raise HTTPException(status_code=500, detail=f"Failed to get available dates: {e}")
+
+
+@app.get("/stats/daily/{person}", response_model=DailyStats)
+def get_daily_stats_endpoint(
+    person: str,
+    date: date = Query(..., description="YYYY-MM-DD"),
+):
+    """
+    Get DailyStats for one person on one date.
+    Returns three-state presence_status.
+    """
+    cache_key = f"daily:{person}:{date.isoformat()}"
+
+    def compute():
+        return compute_daily_stats(person, date)
+
+    try:
+        return get_cached_stats(cache_key, compute, ttl_seconds=60)
+    except Exception as e:
+        logger.exception(f"Failed to compute daily stats for person={person}, date={date}")
+        raise HTTPException(status_code=500, detail=f"Failed to compute daily stats: {e}")
+
+
+@app.get("/stats/aggregate", response_model=AggregateStats)
+def get_aggregate_stats_endpoint(
+    scope: str = Query(..., description="weekly | monthly"),
+    period: str = Query(..., description="YYYY-Www (week) or YYYY-MM (month)"),
+    person: str | None = Query(None, description="Specific person or omit for all"),
+):
+    """
+    Get AggregateStats for a week or month.
+
+    Query examples:
+    - /stats/aggregate?scope=weekly&period=2025-W03&person=Asep
+    - /stats/aggregate?scope=monthly&period=2025-01
+    """
+    import calendar
+    from datetime import timedelta
+
+    # Parse period
+    if scope == "weekly":
+        # period format: YYYY-Www
+        try:
+            year, week = period.split("-W")
+            week_num = int(week)
+            # ISO week: get the Monday of that week
+            jan4 = date(int(year), 1, 4)  # Jan 4 is always in week 1
+            start_date = jan4 + timedelta(weeks=week_num - 1, days=-jan4.weekday())
+            end_date = start_date + timedelta(days=6)
+        except (ValueError, IndexError):
+            raise HTTPException(status_code=422, detail="Invalid weekly period format. Use YYYY-Www")
+    elif scope == "monthly":
+        # period format: YYYY-MM
+        try:
+            year, month = period.split("-")
+            year, month = int(year), int(month)
+            _, last_day = calendar.monthrange(year, month)
+            start_date = date(year, month, 1)
+            end_date = date(year, month, last_day)
+        except (ValueError, IndexError):
+            raise HTTPException(status_code=422, detail="Invalid monthly period format. Use YYYY-MM")
+    else:
+        raise HTTPException(status_code=422, detail="Scope must be 'weekly' or 'monthly'")
+
+    cache_key = f"aggregate:{scope}:{period}:{person}"
+
+    def compute():
+        return compute_aggregate(person=person, start_date=start_date, end_date=end_date, scope=scope)
+
+    try:
+        return get_cached_stats(cache_key, compute, ttl_seconds=60)
+    except Exception as e:
+        logger.exception(f"Failed to compute aggregate stats scope={scope} period={period} person={person}")
+        raise HTTPException(status_code=500, detail=f"Failed to compute aggregate stats: {e}")
+
+
+@app.get("/stats/trend", response_model=list[TrendPoint])
+def get_trend_series_endpoint(
+    scope: str = Query(..., description="weekly | monthly"),
+    period: str = Query(...),
+    person: str | None = Query(None),
+):
+    """
+    Get daily TrendPoints for a period (for trend charts).
+    Returns array even for days with no data (marked NO_DATA).
+    """
+    import calendar
+    from datetime import timedelta
+
+    # Parse period
+    if scope == "weekly":
+        try:
+            year, week = period.split("-W")
+            week_num = int(week)
+            jan4 = date(int(year), 1, 4)
+            start_date = jan4 + timedelta(weeks=week_num - 1, days=-jan4.weekday())
+            end_date = start_date + timedelta(days=6)
+        except (ValueError, IndexError):
+            raise HTTPException(status_code=422, detail="Invalid weekly period format. Use YYYY-Www")
+    elif scope == "monthly":
+        try:
+            year, month = period.split("-")
+            year, month = int(year), int(month)
+            _, last_day = calendar.monthrange(year, month)
+            start_date = date(year, month, 1)
+            end_date = date(year, month, last_day)
+        except (ValueError, IndexError):
+            raise HTTPException(status_code=422, detail="Invalid monthly period format. Use YYYY-MM")
+    else:
+        raise HTTPException(status_code=422, detail="Scope must be 'weekly' or 'monthly'")
+
+    cache_key = f"trend:{scope}:{period}:{person}"
+
+    def compute():
+        return compute_trend_series(person=person, start_date=start_date, end_date=end_date)
+
+    try:
+        return get_cached_stats(cache_key, compute, ttl_seconds=60)
+    except Exception as e:
+        logger.exception(f"Failed to compute trend series scope={scope} period={period} person={person}")
+        raise HTTPException(status_code=500, detail=f"Failed to compute trend series: {e}")
+
+
+@app.get("/stats/comparison", response_model=list[PersonComparison])
+def get_person_comparison_endpoint(
+    scope: str = Query(..., description="weekly | monthly"),
+    period: str = Query(...),
+):
+    """
+    Get PersonComparison for all people in person_map.
+    Used when 'Semua orang' is selected.
+    """
+    import calendar
+    from datetime import timedelta
+
+    if scope == "weekly":
+        try:
+            year, week = period.split("-W")
+            week_num = int(week)
+            jan4 = date(int(year), 1, 4)
+            start_date = jan4 + timedelta(weeks=week_num - 1, days=-jan4.weekday())
+            end_date = start_date + timedelta(days=6)
+        except (ValueError, IndexError):
+            raise HTTPException(status_code=422, detail="Invalid weekly period format. Use YYYY-Www")
+    elif scope == "monthly":
+        try:
+            year, month = period.split("-")
+            year, month = int(year), int(month)
+            _, last_day = calendar.monthrange(year, month)
+            start_date = date(year, month, 1)
+            end_date = date(year, month, last_day)
+        except (ValueError, IndexError):
+            raise HTTPException(status_code=422, detail="Invalid monthly period format. Use YYYY-MM")
+    else:
+        raise HTTPException(status_code=422, detail="Scope must be 'weekly' or 'monthly'")
+
+    cache_key = f"comparison:{scope}:{period}"
+
+    def compute():
+        return compute_person_comparison(start_date=start_date, end_date=end_date)
+
+    try:
+        return get_cached_stats(cache_key, compute, ttl_seconds=60)
+    except Exception as e:
+        logger.exception(f"Failed to compute person comparison scope={scope} period={period}")
+        raise HTTPException(status_code=500, detail=f"Failed to compute person comparison: {e}")
 
 
 if __name__ == "__main__":
