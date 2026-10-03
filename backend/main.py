@@ -198,6 +198,12 @@ def detect(req: DetectRequest):
         logger.exception("Inference error")
         raise HTTPException(status_code=500, detail=f"Inference failed: {e}")
 
+    # Save to DB for stats (testing mode)
+    try:
+        _save_detection_logs(results, angle, datetime.now())
+    except Exception:
+        logger.warning("Failed to save detection to DB (non-critical)")
+
     desk_results = {desk: DeskResult(**data) for desk, data in results.items()}
     return DetectResponse(angle=angle, desks=desk_results)
 
@@ -259,6 +265,12 @@ async def detect_file(
     except Exception as e:
         logger.exception("Inference error")
         raise HTTPException(status_code=500, detail=f"Inference failed: {e}")
+
+    # Save to DB for stats (testing mode)
+    try:
+        _save_detection_logs(results, angle, datetime.now())
+    except Exception:
+        logger.warning("Failed to save detection to DB (non-critical)")
 
     desk_results = {desk: DeskResult(**data) for desk, data in results.items()}
     return DetectResponse(angle=angle, desks=desk_results)
