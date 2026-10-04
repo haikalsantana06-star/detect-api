@@ -383,62 +383,15 @@ def _save_detection_logs(results: dict, angle: str, timestamp: datetime):
 
 
 # ---------------------------------------------------------------------------
-# Original Stats Endpoints
+# Stats Endpoints — ORDER MATTERS: static paths BEFORE parameterized paths
 # ---------------------------------------------------------------------------
-
-
-@app.get("/stats/{person}", response_model=StatsResponse)
-def get_stats_by_person(
-    person: str,
-    target_date_param: date | None = Query(default=None, description="Date in YYYY-MM-DD format, defaults to today"),
-):
-    """Get 5 management indicators for a person on a given date."""
-    target_date = target_date_param if target_date_param is not None else date.today()
-    cache_key = f"stats:person:{person}:{target_date.isoformat()}"
-
-    def compute():
-        return compute_stats(person, target_date)
-
-    try:
-        return get_cached_stats(cache_key, compute, ttl_seconds=60)
-    except Exception as e:
-        logger.exception(f"Stats computation failed for person={person}, date={target_date}")
-        raise HTTPException(status_code=500, detail=f"Failed to compute stats: {e}")
-
-
-@app.get("/stats/desk/{desk}", response_model=DeskStatsResponse)
-def get_stats_by_desk(
-    desk: str,
-    date: date = Query(default=None, description="Date in YYYY-MM-DD format, defaults to today"),
-):
-    """Get 5 management indicators for a desk on a given date."""
-    target_date = target_date_param if target_date_param is not None else date.today()
-    cache_key = f"stats:desk:{desk}:{target_date.isoformat()}"
-
-    def compute():
-        return compute_desk_stats(desk, target_date)
-
-    try:
-        return get_cached_stats(cache_key, compute, ttl_seconds=60)
-    except Exception as e:
-        logger.exception(f"Stats computation failed for desk={desk}, date={target_date}")
-        raise HTTPException(status_code=500, detail=f"Failed to compute stats: {e}")
-
-
-# ---------------------------------------------------------------------------
-# Enhanced Stats Endpoints
-# ---------------------------------------------------------------------------
-
 
 @app.get("/stats/available-dates", response_model=AvailableDates)
 def get_available_dates_endpoint(
     person: str | None = Query(None, description="Filter by person"),
     year_month: str | None = Query(None, description="YYYY-MM filter"),
 ):
-    """
-    Return list of dates that have detection data.
-    Frontend uses this to populate date/week/month selectors.
-    """
+    """Return list of dates that have detection data."""
     cache_key = f"available_dates:{person}:{year_month}"
 
     def compute():
@@ -457,10 +410,7 @@ def get_daily_stats_endpoint(
     person: str,
     date: date = Query(..., description="YYYY-MM-DD"),
 ):
-    """
-    Get DailyStats for one person on one date.
-    Returns three-state presence_status.
-    """
+    """Get DailyStats for one person on one date. Returns three-state presence_status."""
     cache_key = f"daily:{person}:{date.isoformat()}"
 
     def compute():
@@ -481,28 +431,22 @@ def get_aggregate_stats_endpoint(
 ):
     """
     Get AggregateStats for a week or month.
-
-    Query examples:
     - /stats/aggregate?scope=weekly&period=2025-W03&person=Asep
     - /stats/aggregate?scope=monthly&period=2025-01
     """
     import calendar
     from datetime import timedelta
 
-    # Parse period
     if scope == "weekly":
-        # period format: YYYY-Www
         try:
             year, week = period.split("-W")
             week_num = int(week)
-            # ISO week: get the Monday of that week
-            jan4 = date(int(year), 1, 4)  # Jan 4 is always in week 1
+            jan4 = date(int(year), 1, 4)
             start_date = jan4 + timedelta(weeks=week_num - 1, days=-jan4.weekday())
             end_date = start_date + timedelta(days=6)
         except (ValueError, IndexError):
             raise HTTPException(status_code=422, detail="Invalid weekly period format. Use YYYY-Www")
     elif scope == "monthly":
-        # period format: YYYY-MM
         try:
             year, month = period.split("-")
             year, month = int(year), int(month)
@@ -532,14 +476,10 @@ def get_trend_series_endpoint(
     period: str = Query(...),
     person: str | None = Query(None),
 ):
-    """
-    Get daily TrendPoints for a period (for trend charts).
-    Returns array even for days with no data (marked NO_DATA).
-    """
+    """Get daily TrendPoints for a period (for trend charts)."""
     import calendar
     from datetime import timedelta
 
-    # Parse period
     if scope == "weekly":
         try:
             year, week = period.split("-W")
@@ -578,10 +518,7 @@ def get_person_comparison_endpoint(
     scope: str = Query(..., description="weekly | monthly"),
     period: str = Query(...),
 ):
-    """
-    Get PersonComparison for all people in person_map.
-    Used when 'Semua orang' is selected.
-    """
+    """Get PersonComparison for all people in person_map."""
     import calendar
     from datetime import timedelta
 
@@ -616,6 +553,49 @@ def get_person_comparison_endpoint(
     except Exception as e:
         logger.exception(f"Failed to compute person comparison scope={scope} period={period}")
         raise HTTPException(status_code=500, detail=f"Failed to compute person comparison: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Legacy Stats Endpoints — MUST be LAST (parameterized routes)
+# ---------------------------------------------------------------------------
+
+@app.get("/stats/{person}", response_model=StatsResponse)
+def get_stats_by_person(
+    person: str,
+    target_date_param: date | None = Query(default=None, description="Date in YYYY-MM-DD format, defaults to today"),
+):
+    """Get 5 management indicators for a person on a given date."""
+    target_date = target_date_param if target_date_param is not None else date.today()
+    cache_key = f"stats:person:{person}:{target_date.isoformat()}"
+
+    def compute():
+        return compute_stats(person, target_date)
+
+    try:
+        return get_cached_stats(cache_key, compute, ttl_seconds=60)
+    except Exception as e:
+        logger.exception(f"Stats computation failed for person={person}, date={target_date}")
+        raise HTTPException(status_code=500, detail=f"Failed to compute stats: {e}")
+
+
+@app.get("/stats/desk/{desk}", response_model=DeskStatsResponse)
+def get_stats_by_desk(
+    desk: str,
+    target_date_param: date | None = Query(default=None, description="Date in YYYY-MM-DD format, defaults to today"),
+):
+    """Get 5 management indicators for a desk on a given date."""
+    target_date = target_date_param if target_date_param is not None else date.today()
+    cache_key = f"stats:desk:{desk}:{target_date.isoformat()}"
+
+    def compute():
+        return compute_desk_stats(desk, target_date)
+
+    try:
+        return get_cached_stats(cache_key, compute, ttl_seconds=60)
+    except Exception as e:
+        logger.exception(f"Stats computation failed for desk={desk}, date={target_date}")
+        raise HTTPException(status_code=500, detail=f"Failed to compute stats: {e}")
+
 
 
 if __name__ == "__main__":
